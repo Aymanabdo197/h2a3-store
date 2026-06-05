@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>تم تقديم الطلب #{{ order.id }}</h1>
+<p>طريقة الدفع: {{ order.payment_method }}</p>
+{% if order.paid %}
+    <p>حالة الدفع: مدفوع</p>
+    {% if order.license_key %}
+        <div class="license">
+            <h2>مفتاح الترخيص الخاص بك:</h2>
+            <code>{{ order.license_key }}</code>
+        </div>
+    {% endif %}
+{% else %}
+    <p>حالة الدفع: قيد المراجعة.</p>
+{% endif %}
+<a href="{{ url_for('home') }}">العودة للمتجر</a>
+{% endblock %}

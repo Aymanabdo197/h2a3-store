@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ product.name }}</h1>
+<p>{{ product.description }}</p>
+<h2>{% if product.price == 0 %}مجاني{% else %}${{ "%.2f"|format(product.price) }}/شهر{% endif %}</h2>
+<a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn">أضف للسلة</a>
+{% endblock %}

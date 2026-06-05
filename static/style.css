@@ -1,0 +1,11 @@
+body { font-family: 'Arial', sans-serif; background: #0f172a; color: #f1f5f9; }
+nav { background: #1e293b; padding: 15px; text-align: center; }
+nav a { color: #94a3b8; margin: 0 15px; text-decoration: none; }
+nav a:hover { color: #10b981; }
+.container { max-width: 1200px; margin: auto; padding: 20px; }
+.btn { display: inline-block; padding: 10px 20px; background: #10b981; color: #000; border-radius: 5px; text-decoration: none; }
+.product-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; margin: 15px 0; }
+.price { font-size: 1.4em; color: #10b981; }
+.alert { padding: 10px; margin: 10px 0; border-radius: 5px; }
+.alert-success { background: #065f46; }
+.alert-danger { background: #7f1d1d; }

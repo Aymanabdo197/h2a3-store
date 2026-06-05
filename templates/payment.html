@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="payment-container">
+    <h1>الدفع عبر {{ 'فودافون كاش' if order.payment_method == 'vodafone_cash' else 'محفظة اتصالات' }}</h1>
+    <div class="wallet-info">
+        <p>الرجاء التحويل إلى الرقم:</p>
+        <h2>{{ wallet_number }}</h2>
+        <p>المبلغ المطلوب: <strong>${{ "%.2f"|format(order.total) }}</strong></p>
+        <p>بعد التحويل، أدخل الرقم المرجعي (أو رقم هاتفك) واضغط "تأكيد التحويل".</p>
+    </div>
+    <form method="POST" action="{{ url_for('confirm_payment', order_id=order.id) }}">
+        <input type="text" name="reference_number" placeholder="الرقم المرجعي للتحويل" required>
+        <button type="submit" class="btn">تأكيد التحويل</button>
+    </form>
+</div>
+{% endblock %}

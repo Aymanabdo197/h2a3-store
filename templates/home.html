@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+    <h1>حماية بياناتك بأقوى التقنيات</h1>
+    <p>تشفير مزدوج، تدمير ذاتي، وكشف التهديدات الداخلية – كل ذلك في منصة واحدة.</p>
+    <a href="{{ url_for('products') }}" class="btn">تسوق الآن</a>
+</div>
+<section class="featured-products">
+    {% for product in products %}
+    <div class="product-card">
+        <h3>{{ product.name }}</h3>
+        <p>{{ product.description[:100] }}...</p>
+        <span class="price">{% if product.price == 0 %}مجاني{% else %}${{ "%.2f"|format(product.price) }}{% endif %}</span>
+        <a href="{{ url_for('product_detail', product_id=product.id) }}">تفاصيل</a>
+        <a href="{{ url_for('add_to_cart', product_id=product.id) }}">أضف للسلة</a>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

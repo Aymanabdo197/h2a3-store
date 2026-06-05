@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>إتمام الشراء</h1>
+<form method="POST">
+    <div class="cart-summary">
+        <h3>المنتجات:</h3>
+        <ul>
+            {% for item in cart_items %}
+            <li>{{ item.product.name }} ({{ item.quantity }}) - {% if item.product.price == 0 %}مجاني{% else %}${{ "%.2f"|format(item.product.price * item.quantity) }}{% endif %}</li>
+            {% endfor %}
+        </ul>
+        <h3>الإجمالي: ${{ "%.2f"|format(total) }}</h3>
+    </div>
+    <div class="payment-method">
+        <h3>اختر طريقة الدفع:</h3>
+        <label><input type="radio" name="payment_method" value="vodafone_cash" checked> فودافون كاش</label>
+        <label><input type="radio" name="payment_method" value="etisalat_wallet"> محفظة اتصالات</label>
+        <label><input type="radio" name="payment_method" value="card"> بطاقة ائتمان (محاكاة)</label>
+    </div>
+    <button type="submit" class="btn">متابعة</button>
+</form>
+{% endblock %}

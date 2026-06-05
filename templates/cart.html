@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>سلة التسوق</h1>
+{% if cart_items %}
+<table>
+    <tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>
+    {% for item in cart_items %}
+    <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{% if item.product.price == 0 %}مجاني{% else %}${{ "%.2f"|format(item.product.price) }}{% endif %}</td>
+        <td>{% if item.product.price == 0 %}مجاني{% else %}${{ "%.2f"|format(item.product.price * item.quantity) }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>
+<h3>الإجمالي: ${{ "%.2f"|format(total) }}</h3>
+<a href="{{ url_for('checkout') }}" class="btn">إتمام الشراء</a>
+{% else %}
+<p>السلة فارغة.</p>
+{% endif %}
+{% endblock %}

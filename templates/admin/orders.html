@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>إدارة الطلبات</h1>
+<table>
+    <tr><th>رقم الطلب</th><th>التاريخ</th><th>الإجمالي</th><th>طريقة الدفع</th><th>مرجع</th><th>مدفوع</th><th>ترخيص</th><th>إجراء</th></tr>
+    {% for order in orders %}
+    <tr>
+        <td>{{ order.id }}</td>
+        <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+        <td>${{ "%.2f"|format(order.total) }}</td>
+        <td>{{ order.payment_method }}</td>
+        <td>{{ order.reference_number or '' }}</td>
+        <td>{{ 'نعم' if order.paid else 'لا' }}</td>
+        <td>{{ order.license_key or '' }}</td>
+        <td>
+            {% if not order.paid and order.payment_method in ('vodafone_cash','etisalat_wallet') %}
+            <a href="{{ url_for('admin_confirm_payment', order_id=order.id) }}" class="btn">تأكيد الدفع</a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
