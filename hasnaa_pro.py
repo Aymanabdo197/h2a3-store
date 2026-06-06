@@ -1,74 +1,24 @@
 #!/usr/bin/env python3
-import os, sys, time, json, logging, argparse, asyncio, hashlib, base64, secrets, platform, uuid
+"""
+HASNAA PRO v10.0 – Production Stable Release
+"""
+import os, sys, time, re, json, logging, argparse, asyncio, base64, secrets
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs, urlencode
 import aiohttp
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import urllib3
-urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("HASNAA")
 
-# ========== الترخيص ==========
-LICENSE_FILE = os.path.join(os.path.expanduser('~'), '.hasnaa_license')
-MASTER_SECRET = b'HASNAA_PRO_2024_SECURE_KEY'
-
-def get_machine_id():
-    raw = f"{platform.node()}-{uuid.getnode()}-{platform.machine()}"
-    return hashlib.sha256(raw.encode()).hexdigest()
-
-def generate_trial_license():
-    mid = get_machine_id()
-    expiry = time.time() + (90 * 24 * 3600)
-    payload = json.dumps({'mid': mid, 'exp': expiry, 'type': 'trial'})
-    key = hashlib.sha256(MASTER_SECRET).digest()
-    nonce = secrets.token_bytes(12)
-    cipher = AESGCM(key)
-    ct = cipher.encrypt(nonce, payload.encode(), b'')
-    return base64.b64encode(nonce + ct).decode()
-
-def verify_license():
-    if not os.path.exists(LICENSE_FILE):
-        lic = generate_trial_license()
-        with open(LICENSE_FILE, 'w') as f: f.write(lic)
-        os.chmod(LICENSE_FILE, 0o600)
-        print("✅ تم تفعيل النسخة التجريبية (3 أشهر)")
-        return True
-    try:
-        with open(LICENSE_FILE, 'r') as f: lic = f.read().strip()
-        raw = base64.b64decode(lic)
-        nonce, ct = raw[:12], raw[12:]
-        key = hashlib.sha256(MASTER_SECRET).digest()
-        cipher = AESGCM(key)
-        plain = cipher.decrypt(nonce, ct, b'')
-        data = json.loads(plain)
-        if data.get('mid') != get_machine_id() or time.time() > data['exp']:
-            print("⏰ انتهت صلاحية الترخيص")
-            return False
-        remaining = int((data['exp'] - time.time()) / 86400)
-        print(f"✅ الترخيص ساري – {remaining} يوم متبقي")
-        return True
-    except:
-        return False
-
-# ========== البروكسي ==========
-class ProxyManager:
-    def __init__(self, proxy_url=None, use_tor=False):
-        self.proxy_url = proxy_url
-        self.use_tor = use_tor
-    def get_proxy(self):
-        if self.use_tor: return 'socks5h://127.0.0.1:9050'
-        return self.proxy_url
-
-# ========== الماسح المستقر ==========
-SQL_PAYLOADS = ["' OR 1=1--", "' UNION SELECT NULL--", "admin'--"]
-XSS_PAYLOADS = ['<script>alert(1)</script>', '"><script>alert(1)</script>']
-LFI_PAYLOADS = ['../../etc/passwd', '....//....//etc/passwd']
-CMDE_PAYLOADS = [';whoami', '|id']
+# إضافة المسار لاستيراد الوحدات
+sys.path.insert(0, os.path.dirname(__file__))
+from hasnaa.utils.license_manager import verify_license
+from hasnaa.utils.proxy_manager import ProxyManager
 
 class StableScanner:
-    def __init__(self, url, concurrency=10, proxy=None):
+    def __init__(self, url, concurrency=10, stealth=False, proxy=None):
         self.url = url
         self.concurrency = concurrency
         self.proxy = proxy
@@ -82,16 +32,16 @@ class StableScanner:
             try:
                 async with self.session.get(url, timeout=self.timeout) as resp:
                     html = await resp.text()
-                    return html, resp.status
+                    return html, resp.status, resp.headers
             except Exception as e:
                 logger.debug(f"Request failed: {e}")
-                return None, None
+                return None, None, None
 
     async def _test_payload(self, url, param, payload, check_func, vuln_type):
         test_url = url.replace('FUZZ', payload) if 'FUZZ' in url else url
-        html, _ = await self._fetch(test_url)
+        html, _, _ = await self._fetch(test_url)
         if html is None: return
-        is_vuln, desc = check_func(html, payload)
+        is_vuln, desc = check_func(html, payload, 0)
         if is_vuln:
             self.findings.append({
                 'type': vuln_type, 'payload': payload, 'desc': desc,
@@ -128,17 +78,22 @@ class StableScanner:
             return self.findings
         return asyncio.run(main())
 
-    def _check_sql(self, html, payload):
+    def _check_sql(self, html, payload, elapsed):
         errors = ['sql syntax', 'mysql_fetch', 'unclosed quotation', 'error in your sql']
         if any(e in html.lower() for e in errors): return True, 'Error-based SQLi'
         return False, ''
-    def _check_xss(self, html, payload):
+    def _check_xss(self, html, payload, elapsed):
         clean = payload.split('//')[0] if '//' in payload else payload
         return (clean and clean in html, 'Reflected XSS')
-    def _check_lfi(self, html, payload):
+    def _check_lfi(self, html, payload, elapsed):
         return (any(k in html for k in ['root:x:0:0:', 'www-data:', '/bin/bash']), 'LFI')
-    def _check_cmdi(self, html, payload):
+    def _check_cmdi(self, html, payload, elapsed):
         return (any(k in html for k in ['uid=', 'gid=', 'groups=']), 'CMDi')
+
+SQL_PAYLOADS = ["' OR 1=1--", "' UNION SELECT NULL--", "admin'--"]
+XSS_PAYLOADS = ['<script>alert(1)</script>', '"><script>alert(1)</script>']
+LFI_PAYLOADS = ['../../etc/passwd', '....//....//etc/passwd']
+CMDE_PAYLOADS = [';whoami', '|id']
 
 def generate_html_report(findings, target_url, scan_time):
     html = f"""<!DOCTYPE html><html dir="rtl" lang="ar">
@@ -160,14 +115,12 @@ def main():
     parser.add_argument('--url', required=True)
     parser.add_argument('--concurrency', type=int, default=10)
     parser.add_argument('--proxy')
-    parser.add_argument('--tor', action='store_true')
     parser.add_argument('--report', help='حفظ تقرير HTML')
     args = parser.parse_args()
 
     if not args.url.startswith('http'): args.url = 'http://' + args.url
 
-    proxy_mgr = ProxyManager(proxy_url=args.proxy, use_tor=args.tor)
-    scanner = StableScanner(args.url, concurrency=args.concurrency, proxy=proxy_mgr.get_proxy())
+    scanner = StableScanner(args.url, concurrency=args.concurrency, proxy=args.proxy)
     start_time = datetime.now()
     findings = scanner.run()
     scan_time = datetime.now() - start_time
